@@ -2,14 +2,20 @@ package com.boring.community.controller;
 
 import com.boring.community.annotation.LoginRequired;
 import com.boring.community.entity.User;
+import com.boring.community.service.FollowService;
+import com.boring.community.service.LikeService;
 import com.boring.community.service.UserService;
+import com.boring.community.until.CommunityConstant;
 import com.boring.community.until.CommunityUtil;
 import com.boring.community.until.HostHolder;
+import com.boring.community.until.IsPictureUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Required;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.annotation.Id;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -23,7 +29,7 @@ import java.io.OutputStream;
 
 @Controller
 @RequestMapping("/user")
-public class UserController {
+public class UserController implements CommunityConstant {
 
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
@@ -42,6 +48,12 @@ public class UserController {
     @Autowired
     private HostHolder hostHolder;
 
+    @Autowired
+    private LikeService likeService;
+
+    @Autowired
+    private FollowService followService;
+
     @LoginRequired
     @RequestMapping(path = "/setting",method = RequestMethod.GET)
     public String getSettingPage(){
@@ -56,15 +68,17 @@ public class UserController {
             return "/site/setting";
         }
 
+
         String fileName = headerImage.getOriginalFilename();
         String suffix = fileName.substring(fileName.lastIndexOf(".") + 1);
-        if (StringUtils.isBlank(suffix) || suffix !="png" || suffix !="jpg" ||suffix !="jpeg"){
-            model.addAttribute("error","文件格式不正确!");
+        if (IsPictureUtil.IsPicture(suffix)) {
+            model.addAttribute("error", "请选择正确的图片格式!");
             return "/site/setting";
         }
 
+
         //生成随机文件命名
-        fileName = CommunityUtil.generateUUID() + suffix;
+        fileName = CommunityUtil.generateUUID() + "." + suffix;
         //确定文件存放路径
         File dest = new File(uploadPath + "/" + fileName);
         try {
@@ -112,10 +126,10 @@ public class UserController {
         oldpassword = CommunityUtil.md5(oldpassword+user.getSalt());
 
         if (StringUtils.isBlank(oldpassword) || StringUtils.isBlank(newpassword)){
-            model.addAttribute("error","请输入密码!");
+            model.addAttribute("passwordMsg1","请输入密码!");
             return "/site/setting";
         }if (!user.getPassword().equals(oldpassword)){
-            model.addAttribute("passwordMsg","原密码为空或不正确!");
+            model.addAttribute("passwordMsg2","原密码为空或不正确!");
             return "/site/setting";
         }else {
             newpassword = CommunityUtil.md5(newpassword+user.getSalt());
@@ -124,6 +138,34 @@ public class UserController {
 
         userService.logout(ticket);
         return "redirect:/login";
+    }
+
+    //个人主页
+    @LoginRequired
+    @RequestMapping(path = "/profile/{userId}" , method = RequestMethod.GET)
+    public String getProfilePage(@PathVariable("userId") int userId , Model model){
+        User user = userService.findUserById(userId);
+
+        //用户
+        model.addAttribute("user",user);
+        //点赞数量
+        int likeCount = likeService.findUserLikeCount(userId);
+        model.addAttribute("likeCount", likeCount);
+        //关注数量
+        long followeeCount = followService.findFolloweeCount(userId, ENTITY_TYPE_USER);
+        model.addAttribute("followeeCount",followeeCount);
+        //粉丝数量
+        long followerCount = followService.findFollowerCount(ENTITY_TYPE_USER , userId);
+        model.addAttribute("followerCount",followerCount);
+        //是否已关注
+        boolean hasFollowed = false;
+        if (hostHolder.getUser() != null){
+            hasFollowed = followService.hasFollowed(hostHolder.getUser().getId(), ENTITY_TYPE_USER, userId);
+        }
+        model.addAttribute("hasFollowed", hasFollowed);
+
+        return "/site/profile";
+
     }
 
 }

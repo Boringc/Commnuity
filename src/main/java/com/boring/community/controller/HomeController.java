@@ -5,7 +5,9 @@ import com.boring.community.entity.DiscussPost;
 import com.boring.community.entity.Page;
 import com.boring.community.entity.User;
 import com.boring.community.service.DiscussPostService;
+import com.boring.community.service.LikeService;
 import com.boring.community.service.UserService;
+import com.boring.community.until.CommunityConstant;
 import org.apache.ibatis.annotations.Mapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -19,13 +21,16 @@ import java.util.List;
 import java.util.Map;
 
 @Controller
-public class HomeController {
+public class HomeController implements CommunityConstant {
 
     @Autowired
     private DiscussPostService discussPostService;
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private LikeService likeService;
 
     @RequestMapping(path = "/index" , method = RequestMethod.GET)
     public String getIndexPage(Model model, Page page){
@@ -42,6 +47,9 @@ public class HomeController {
                 map.put("post",post);
                 User user = userService.findUserById(post.getUserId());
                 map.put("user",user);
+
+                long likeCount = likeService.findEntityLikeCount(ENTITY_TYPE_POST, post.getId());
+                map.put("likeCount",likeCount);
                 discussPosts.add(map);
             }
         }
