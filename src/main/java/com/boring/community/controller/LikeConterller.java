@@ -1,7 +1,10 @@
 package com.boring.community.controller;
 
+import com.boring.community.entity.Event;
 import com.boring.community.entity.User;
+import com.boring.community.event.EventProducer;
 import com.boring.community.service.LikeService;
+import com.boring.community.until.CommunityConstant;
 import com.boring.community.until.CommunityUtil;
 import com.boring.community.until.HostHolder;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,7 +17,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Controller
-public class LikeConterller {
+public class LikeConterller implements CommunityConstant {
 
     @Autowired
     private LikeService likeService;
@@ -22,9 +25,12 @@ public class LikeConterller {
     @Autowired
     private HostHolder hostHolder;
 
+    @Autowired
+    private EventProducer eventProducer;
+
     @RequestMapping(path = "/like", method = RequestMethod.POST)
     @ResponseBody
-    public String like(int entityType, int entityId,int entityUserId){
+    public String like(int entityType, int entityId,int entityUserId, int postId){
         User user = hostHolder.getUser();
 
         //点赞
@@ -37,6 +43,19 @@ public class LikeConterller {
         Map<String, Object> map = new HashMap<>();
         map.put("likeCount",likeCount);
         map.put("likeStatus",likeStatus);
+
+        //触发点赞事件
+        if (likeStatus == 1){
+            Event event = new Event()
+                    .setTopic(TOPIC_LIKE)
+                    .setUserId(hostHolder.getUser().getId())
+                    .setEntityType(entityType)
+                    .setEntityId(entityId)
+                    .setEntityUserId(entityUserId)
+                    .setData("postId", postId);
+
+            eventProducer.fireEvent(event);
+        }
 
         return CommunityUtil.getJSONString(0 , null, map);
 

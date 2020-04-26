@@ -1,7 +1,9 @@
 package com.boring.community.controller;
 
+import com.boring.community.entity.Event;
 import com.boring.community.entity.Page;
 import com.boring.community.entity.User;
+import com.boring.community.event.EventProducer;
 import com.boring.community.service.FollowService;
 import com.boring.community.service.UserService;
 import com.boring.community.until.CommunityConstant;
@@ -30,6 +32,9 @@ public class FollowController implements CommunityConstant {
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private EventProducer eventProducer;
+
     @RequestMapping(path = "/follow" , method = RequestMethod.POST)
     @ResponseBody
     public String follow(int entityType, int entityId){
@@ -39,6 +44,15 @@ public class FollowController implements CommunityConstant {
         }
 
         followService.follow(user.getId(), entityType, entityId);
+
+        //触发关注事件
+        Event event = new Event()
+                .setTopic(TOPIC_FOLLOW)
+                .setUserId(hostHolder.getUser().getId())
+                .setEntityType(entityType)
+                .setUserId(entityId)
+                .setEntityUserId(entityId);
+        eventProducer.fireEvent(event);
 
         return CommunityUtil.getJSONString(0,"已关注!");
     }
