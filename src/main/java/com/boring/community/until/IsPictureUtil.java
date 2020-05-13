@@ -3,11 +3,6 @@ package com.boring.community.until;
 
 /**
  * 判断文件是否为图片<br>
- * <br>
- * @param pInput 文件名<br>
- * @param pImgeFlag 判断具体文件类型<br>
- * @return 检查后的结果<br>
- * @throws Exception
  */
 
 import org.springframework.stereotype.Component;

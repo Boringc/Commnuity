@@ -41,4 +41,19 @@
         where id = #{id}
     </select>
 
+    <select id="selectCommentCountsByUserId" resultType="int">
+        select count(id)
+        from comment
+        where user_id = #{userId}
+    </select>
+
+    <select id="selectCommentsByuserId" resultType="Comment">
+        select <include refid="selectFields"></include>
+        from comment
+        where entity_type = 1
+        and user_id = #{userId}
+        order by create_time desc
+        limit #{offset},#{limit}
+    </select>
+
 </mapper>
